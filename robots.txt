@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://emanuel-yt.github.io/fuerza-en-casa/sitemap.xml
