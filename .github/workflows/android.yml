@@ -21,6 +21,7 @@ jobs:
           mkdir -p /tmp/fuerza-app/app/src/main/java/io/github/emanuelyt/fuerzaencasa
           mkdir -p /tmp/fuerza-app/app/src/main/assets/img
           cp app.html /tmp/fuerza-app/app/src/main/assets/index.html
+          cp firebase-config.js app-account.js /tmp/fuerza-app/app/src/main/assets/
           cp manifest.webmanifest icon-192.png icon-512.png apple-touch-icon.png /tmp/fuerza-app/app/src/main/assets/
           cp img/maniqui-front.jpg img/maniqui-back.jpg /tmp/fuerza-app/app/src/main/assets/img/
           cp img/*.svg /tmp/fuerza-app/app/src/main/assets/img/
@@ -38,7 +39,7 @@ jobs:
           android {
               namespace 'io.github.emanuelyt.fuerzaencasa'
               compileSdk 35
-              defaultConfig { applicationId 'io.github.emanuelyt.fuerzaencasa'; minSdk 23; targetSdk 35; versionCode 8; versionName '1.7' }
+              defaultConfig { applicationId 'io.github.emanuelyt.fuerzaencasa'; minSdk 23; targetSdk 35; versionCode 10; versionName '1.9' }
           }
           EOT
           cat > /tmp/fuerza-app/app/src/main/AndroidManifest.xml <<'EOT'
@@ -85,6 +86,7 @@ jobs:
                   web.setWebViewClient(new WebViewClient() {
                       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                           Uri u=req.getUrl();
+                          if ("https".equals(u.getScheme()) && "emanuel-yt.github.io".equals(u.getHost()) && u.getPath().startsWith("/fuerza-en-casa/")) return false;
                           if ("https".equals(u.getScheme())) {
                               try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) { }
                               return true;
@@ -93,7 +95,7 @@ jobs:
                       }
                   });
                   setContentView(web);
-                  web.loadUrl("file:///android_asset/index.html?app=1");
+                  web.loadUrl("https://emanuel-yt.github.io/fuerza-en-casa/app.html?app=1&v=19");
               }
               @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
           }
@@ -105,9 +107,9 @@ jobs:
       - name: Publicar APK para descargar
         run: |
           mkdir -p downloads
-          cp /tmp/fuerza-app/app/build/outputs/apk/debug/app-debug.apk downloads/strong-v1-7.apk
+          cp /tmp/fuerza-app/app/build/outputs/apk/debug/app-debug.apk downloads/strong-v1-9.apk
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add downloads/strong-v1-7.apk
+          git add downloads/strong-v1-9.apk
           git commit -m 'Publicar APK de Fuerza en Casa'
           git push
