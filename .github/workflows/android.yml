@@ -20,7 +20,9 @@ jobs:
         run: |
           mkdir -p /tmp/fuerza-app/app/src/main/java/io/github/emanuelyt/fuerzaencasa
           mkdir -p /tmp/fuerza-app/app/src/main/assets/img
-          cp index.html manifest.webmanifest icon-192.png icon-512.png apple-touch-icon.png /tmp/fuerza-app/app/src/main/assets/
+          cp app.html /tmp/fuerza-app/app/src/main/assets/index.html
+          cp manifest.webmanifest icon-192.png icon-512.png apple-touch-icon.png /tmp/fuerza-app/app/src/main/assets/
+          cp img/maniqui-front.jpg img/maniqui-back.jpg /tmp/fuerza-app/app/src/main/assets/img/
           cp img/*.svg /tmp/fuerza-app/app/src/main/assets/img/
           cat > /tmp/fuerza-app/settings.gradle <<'EOT'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
@@ -36,13 +38,13 @@ jobs:
           android {
               namespace 'io.github.emanuelyt.fuerzaencasa'
               compileSdk 35
-              defaultConfig { applicationId 'io.github.emanuelyt.fuerzaencasa'; minSdk 23; targetSdk 35; versionCode 1; versionName '1.0' }
+              defaultConfig { applicationId 'io.github.emanuelyt.fuerzaencasa'; minSdk 23; targetSdk 35; versionCode 2; versionName '1.1' }
           }
           EOT
           cat > /tmp/fuerza-app/app/src/main/AndroidManifest.xml <<'EOT'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-              <application android:icon="@drawable/appicon" android:label="Fuerza en Casa" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false">
+              <application android:label="Fuerza en Casa" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -69,7 +71,8 @@ jobs:
                   getWindow().setNavigationBarColor(0xff10100f);
                   web = new WebView(this);
                   web.setBackgroundColor(0xff10100f);
-                  web.getSettings().setJavaScriptEnabled(false);
+                  web.getSettings().setJavaScriptEnabled(true);
+                  web.getSettings().setDomStorageEnabled(true);
                   web.setWebViewClient(new WebViewClient() {
                       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                           Uri u=req.getUrl();
@@ -81,13 +84,14 @@ jobs:
                       }
                   });
                   setContentView(web);
-                  web.loadUrl("file:///android_asset/index.html");
+                  web.loadUrl("file:///android_asset/index.html?app=1");
               }
               @Override public void onBackPressed() { if (web.canGoBack()) web.goBack(); else super.onBackPressed(); }
           }
           EOT
           mkdir -p /tmp/fuerza-app/app/src/main/res/drawable
           cp icon-192.png /tmp/fuerza-app/app/src/main/res/drawable/appicon.png
+          sed -i 's/<application android:label=/<application android:icon="@drawable\/appicon" android:label=/' /tmp/fuerza-app/app/src/main/AndroidManifest.xml
       - name: Compilar APK
         run: gradle --no-daemon -p /tmp/fuerza-app assembleDebug
       - name: Publicar APK para descargar
