@@ -1,0 +1,31 @@
+import {auth,db,doc,getDoc,setDoc,onSnapshot,serverTimestamp,runTransaction,google,signInWithPopup,signInWithRedirect,getRedirectResult,createUserWithEmailAndPassword,signInWithEmailAndPassword,sendPasswordResetEmail,signOut,onAuthStateChanged} from './stage-strong-config.js';
+const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),nativeApp=params.has('app')||window.matchMedia('(display-mode: standalone)').matches,gate=$('account-gate');
+let guest=false,unsub=()=>{},uid=null,rev=0,ready=false,dirty=false,inFlight=false,timer,remoteRevision=0;
+const note=t=>{$('gate-status').textContent=t;},summary=t=>{$('account-summary').textContent=t;};
+function error(e){return ({'auth/invalid-credential':'Correo o contraseña incorrectos.','auth/email-already-in-use':'Este correo ya tiene una cuenta.','auth/weak-password':'Usa al menos 6 caracteres.','auth/invalid-email':'Escribe un correo válido.','auth/popup-blocked':'Ventana de Google bloqueada.','permission-denied':'Sin permiso para acceder a los datos.'})[e?.code]||e?.message||'Revisa tu conexión e inténtalo de nuevo.'}
+async function run(fn){try{note('Un momento…');await fn()}catch(e){note(error(e))}}
+function setGateUser(u){$('gate-logout').hidden=!u;$('gate-login').hidden=!!u;$('gate-register').hidden=!!u;$('gate-google').hidden=!!u;$('gate-reset').hidden=!!u;$('gate-email').parentElement.hidden=!!u;$('gate-password').parentElement.hidden=!!u;$('gate-guest').hidden=!!u;}
+const activate=d=>window.dispatchEvent(new CustomEvent('firebase-cloud-data',{detail:d}));
+$('gate-login').onclick=()=>run(async()=>{await signInWithEmailAndPassword(auth,$('gate-email').value.trim(),$('gate-password').value);$('gate-password').value=''});
+$('gate-register').onclick=()=>run(async()=>{await createUserWithEmailAndPassword(auth,$('gate-email').value.trim(),$('gate-password').value);$('gate-password').value=''});
+$('gate-reset').onclick=()=>run(async()=>{const e=$('gate-email').value.trim();if(!e)throw Error('Escribe tu correo primero.');await sendPasswordResetEmail(auth,e);note('Si existe la cuenta, recibirás un enlace para restablecer la contraseña.')});
+$('gate-google').onclick=()=>run(async()=>{if(nativeApp)await signInWithRedirect(auth,google);else await signInWithPopup(auth,google)});
+$('gate-guest').onclick=()=>{guest=true;gate.hidden=true;summary('Sin cuenta: datos locales de este dispositivo.');};
+$('account-open').onclick=()=>{gate.hidden=false;setGateUser(auth.currentUser);note(auth.currentUser?'Cuenta: '+(auth.currentUser.email||'conectada'):'Inicia sesión o crea una cuenta.');};
+$('gate-logout').onclick=()=>run(async()=>{if(dirty||inFlight){note('Espera a que termine la sincronización antes de cerrar sesión.');return}await signOut(auth);guest=false;activate(window.getEmptyWorkoutData());});
+getRedirectResult(auth).catch(e=>note(error(e)));
+onAuthStateChanged(auth,async u=>{unsub();unsub=()=>{};uid=u?.uid||null;rev=0;remoteRevision=0;ready=false;dirty=false;clearTimeout(timer);setGateUser(u);if(!u){if(nativeApp&&!guest)gate.hidden=false;else gate.hidden=true;summary('Sin cuenta: datos locales de este dispositivo.');return;}
+ const id=u.uid,ref=doc(db,'users',id);gate.hidden=true;summary('Cargando progreso de la cuenta…');
+ try{const snapshot=await getDoc(ref);if(auth.currentUser?.uid!==id)return;const docData=snapshot.data()||{},cloud=docData.progress;const previous=window.getWorkoutData(),ownerBefore=localStorage.getItem('strong-progress-owner');const hasPrior=!!(previous?.logs?.length||previous?.completedDates?.length||previous?.equipment?.length||previous?.plan?.length||previous?.profile?.weight||previous?.profile?.target);if(hasPrior&&ownerBefore!==id)localStorage.setItem('strong-unsynced-backup',JSON.stringify(previous));rev=Number(docData.revision||0);remoteRevision=rev;
+ if(cloud){activate(cloud)}else{let local=window.getWorkoutData(),owner=localStorage.getItem('strong-progress-owner');let hasLocal=!!(local?.logs?.length||local?.completedDates?.length||local?.equipment?.length||local?.plan?.length||local?.profile?.weight||local?.profile?.target);let adopt=hasLocal&&(!owner||owner==='guest')&&confirm('Hay registros en este dispositivo. ¿Quieres copiarlos a esta cuenta? Si eliges Cancelar, la cuenta empezará vacía y se conservará una copia local de esos registros.');if(hasLocal&&!adopt)localStorage.setItem('strong-unsynced-backup',JSON.stringify(local));if(!adopt)activate(window.getEmptyWorkoutData());}
+ localStorage.setItem('strong-progress-owner',id);ready=true;summary('Cuenta: '+(u.email||'conectada')+' · progreso cargado.');
+ // Sync local only into empty account, after explicit agreement above.
+ if(!cloud){dirty=true;saveSoon()}
+ unsub=onSnapshot(ref,snap=>{const d=snap.data()||{},next=Number(d.revision||0);if(auth.currentUser?.uid!==id||next<=rev)return;remoteRevision=next;if(dirty||inFlight){summary('Cambios en otro dispositivo. Tu copia local se conserva; vuelve a cargar antes de guardar.');return}rev=next;if(d.progress)activate(d.progress);summary('Progreso actualizado desde la nube.');},e=>summary('Sin conexión con la nube: '+error(e)));
+ }catch(e){summary('No se cargó la nube: '+error(e));note(error(e));gate.hidden=false;}});
+function saveSoon(){clearTimeout(timer);timer=setTimeout(flush,800)}
+async function flush(){if(!dirty||!ready||!uid||inFlight)return;const user=auth.currentUser;if(!user||user.uid!==uid)return;const ref=doc(db,'users',uid),expected=rev,copy=JSON.parse(JSON.stringify(window.getWorkoutData()));dirty=false;inFlight=true;let success=false;
+ try{const next=await runTransaction(db,async tx=>{let snap=await tx.get(ref),current=snap.data()||{},r=Number(current.revision||0);if(r!==expected)throw Error('El progreso cambió en otro dispositivo. Para proteger tus datos, guarda un respaldo local y vuelve a abrir la app.');tx.set(ref,{progress:copy,revision:r+1,updatedAt:serverTimestamp()},{merge:true});return r+1});rev=next;success=true;summary('Cuenta: '+(user.email||'conectada')+' · sincronizado.');}catch(e){dirty=true;summary('No se sincronizó: '+error(e));}finally{inFlight=false;if(success&&dirty&&remoteRevision<=rev)saveSoon()}}
+window.addEventListener('workout-data-changed',()=>{if(!uid||!ready)return;dirty=true;summary('Guardando cambios…');saveSoon()});
+
+window.addEventListener('online',()=>{if(dirty)saveSoon()});
