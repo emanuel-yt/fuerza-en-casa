@@ -63,6 +63,9 @@ jobs:
           import android.webkit.WebResourceRequest;
           import android.content.Intent;
           import android.net.Uri;
+          import android.webkit.JavascriptInterface;
+          import android.content.ClipboardManager;
+          import android.content.ClipData;
           public class MainActivity extends Activity {
               private WebView web;
               @Override public void onCreate(Bundle b) {
@@ -73,6 +76,12 @@ jobs:
                   web.setBackgroundColor(0xff10100f);
                   web.getSettings().setJavaScriptEnabled(true);
                   web.getSettings().setDomStorageEnabled(true);
+                  web.addJavascriptInterface(new Object() {
+                      @JavascriptInterface public void copy(String text) {
+                          ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                          clipboard.setPrimaryClip(ClipData.newPlainText("Fuerza en Casa respaldo",text));
+                      }
+                  }, "AndroidBackup");
                   web.setWebViewClient(new WebViewClient() {
                       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                           Uri u=req.getUrl();
