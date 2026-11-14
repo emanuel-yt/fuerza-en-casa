@@ -27,7 +27,7 @@ jobs:
           cat > /tmp/fuerza-app/settings.gradle <<'EOT'
           pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
           dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name = 'FC'
+          rootProject.name = 'Strong'
           include ':app'
           EOT
           cat > /tmp/fuerza-app/build.gradle <<'EOT'
@@ -38,13 +38,13 @@ jobs:
           android {
               namespace 'io.github.emanuelyt.fuerzaencasa'
               compileSdk 35
-              defaultConfig { applicationId 'io.github.emanuelyt.fuerzaencasa'; minSdk 23; targetSdk 35; versionCode 6; versionName '1.5' }
+              defaultConfig { applicationId 'io.github.emanuelyt.fuerzaencasa'; minSdk 23; targetSdk 35; versionCode 7; versionName '1.6' }
           }
           EOT
           cat > /tmp/fuerza-app/app/src/main/AndroidManifest.xml <<'EOT'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
-              <application android:icon="@drawable/appicon" android:label="FC" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false">
+              <application android:icon="@drawable/appicon" android:label="Strong" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.NoActionBar" android:allowBackup="false">
                   <activity android:name=".MainActivity" android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -79,7 +79,7 @@ jobs:
                   web.addJavascriptInterface(new Object() {
                       @JavascriptInterface public void copy(String text) {
                           ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-                          clipboard.setPrimaryClip(ClipData.newPlainText("FC · respaldo",text));
+                          clipboard.setPrimaryClip(ClipData.newPlainText("Strong · respaldo",text));
                       }
                   }, "AndroidBackup");
                   web.setWebViewClient(new WebViewClient() {
@@ -105,9 +105,9 @@ jobs:
       - name: Publicar APK para descargar
         run: |
           mkdir -p downloads
-          cp /tmp/fuerza-app/app/build/outputs/apk/debug/app-debug.apk downloads/fc-v1-5.apk
+          cp /tmp/fuerza-app/app/build/outputs/apk/debug/app-debug.apk downloads/strong-v1-6.apk
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add downloads/fc-v1-5.apk
+          git add downloads/strong-v1-6.apk
           git commit -m 'Publicar APK de Fuerza en Casa'
           git push
