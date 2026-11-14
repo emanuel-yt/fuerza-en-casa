@@ -100,7 +100,6 @@ jobs:
           EOT
           mkdir -p /tmp/fuerza-app/app/src/main/res/drawable
           cp icon-192.png /tmp/fuerza-app/app/src/main/res/drawable/appicon.png
-          sed -i 's/<application android:icon="@drawable/appicon" android:label=/<application android:icon="@drawable\/appicon" android:label=/' /tmp/fuerza-app/app/src/main/AndroidManifest.xml
       - name: Compilar APK
         run: gradle --no-daemon -p /tmp/fuerza-app assembleDebug
       - name: Publicar APK para descargar
